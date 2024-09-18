@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../services/movie_service.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
@@ -11,6 +12,7 @@ class MovieDetailsScreen extends StatefulWidget {
 class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   final MovieService _movieService = MovieService();
   Map<String, dynamic>? _movieDetails;
+  YoutubePlayerController? _controller;
 
   @override
   void didChangeDependencies() {
@@ -24,12 +26,35 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
       final details = await _movieService.getMovieDetails(id);
       setState(() {
         _movieDetails = details;
+        _initializeYoutubePlayer();
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
     }
+  }
+
+  void _initializeYoutubePlayer() {
+    final trailerUrl = _movieDetails?['trailer_url'];
+    if (trailerUrl != null) {
+      final videoId = YoutubePlayer.convertUrlToId(trailerUrl);
+      if (videoId != null) {
+        _controller = YoutubePlayerController(
+          initialVideoId: videoId,
+          flags: const YoutubePlayerFlags(
+            autoPlay: false,
+            mute: false,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
   }
 
   @override
@@ -57,15 +82,21 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             const SizedBox(height: 8),
             Text(_movieDetails!['overview']),
             const SizedBox(height: 16),
-            ElevatedButton(
-              child: const Text('Watch Trailer'),
-              onPressed: () {
-                // TODO: Implement trailer playback
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Trailer URL: ${_movieDetails!['trailer_url'] ?? 'Not available'}')),
-                );
-              },
-            ),
+            if (_controller != null)
+              YoutubePlayer(
+                controller: _controller!,
+                showVideoProgressIndicator: true,
+                progressIndicatorColor: Colors.blueAccent,
+              )
+            else
+              ElevatedButton(
+                child: const Text('Watch Trailer'),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Trailer URL: ${_movieDetails!['trailer_url'] ?? 'Not available'}')),
+                  );
+                },
+              ),
           ],
         ),
       ),
