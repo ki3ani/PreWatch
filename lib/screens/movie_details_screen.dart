@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:auto_orientation/auto_orientation.dart';
 import '../services/movie_service.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
@@ -13,6 +14,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   final MovieService _movieService = MovieService();
   Map<String, dynamic>? _movieDetails;
   YoutubePlayerController? _controller;
+  bool _isFullScreen = false;
 
   @override
   void didChangeDependencies() {
@@ -54,7 +56,19 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   @override
   void dispose() {
     _controller?.dispose();
+    AutoOrientation.portraitUpMode();
     super.dispose();
+  }
+
+  void _toggleFullScreen() {
+    setState(() {
+      _isFullScreen = !_isFullScreen;
+    });
+    if (_isFullScreen) {
+      AutoOrientation.landscapeAutoMode();
+    } else {
+      AutoOrientation.portraitUpMode();
+    }
   }
 
   @override
@@ -63,6 +77,24 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
       return Scaffold(
         appBar: AppBar(title: const Text('Movie Details')),
         body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_isFullScreen) {
+      return Scaffold(
+        body: Center(
+          child: YoutubePlayer(
+            controller: _controller!,
+            showVideoProgressIndicator: true,
+            progressIndicatorColor: Colors.blueAccent,
+            topActions: [
+              IconButton(
+                icon: const Icon(Icons.fullscreen_exit),
+                onPressed: _toggleFullScreen,
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -83,10 +115,19 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             Text(_movieDetails!['overview']),
             const SizedBox(height: 16),
             if (_controller != null)
-              YoutubePlayer(
-                controller: _controller!,
-                showVideoProgressIndicator: true,
-                progressIndicatorColor: Colors.blueAccent,
+              Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  YoutubePlayer(
+                    controller: _controller!,
+                    showVideoProgressIndicator: true,
+                    progressIndicatorColor: Colors.blueAccent,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.fullscreen),
+                    onPressed: _toggleFullScreen,
+                  ),
+                ],
               )
             else
               ElevatedButton(
